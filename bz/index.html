@@ -15,35 +15,28 @@
             height: 100%;
             border: none;
         }
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        .fallback {
             text-align: center;
+            padding: 50px 20px;
         }
     </style>
 </head>
 <body>
-    <div id="loading" class="loading">
-        <p>页面加载中...</p>
+    <div id="fallback" class="fallback" style="display: none;">
+        <h2>内容加载失败</h2>
+        <p>请点击下方按钮在新窗口中打开</p>
+        <a href="#" id="openNew" style="display: inline-block; padding: 10px 20px; background: #07c160; color: white; text-decoration: none; border-radius: 5px;">在新窗口中打开</a>
     </div>
 
-    <iframe id="contentFrame" src="about:blank" style="display: none;"></iframe>
+    <iframe id="contentFrame" src="about:blank"></iframe>
 
     <script>
-        // 免费的CORS代理服务
-        const proxies = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://proxy.cors.sh/?'
-        ];
-
         function urlSafeBase64Decode(str) {
             let padded = str;
             while (padded.length % 4 !== 0) {
                 padded += '=';
             }
+
             try {
                 return atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
             } catch (e) {
@@ -51,52 +44,37 @@
             }
         }
 
-        function getProxyUrl(targetUrl, proxyIndex = 0) {
-            if (proxyIndex >= proxies.length) return null;
-            return proxies[proxyIndex] + encodeURIComponent(targetUrl);
-        }
-
-        function loadWithProxy(targetUrl, proxyIndex = 0) {
-            const proxyUrl = getProxyUrl(targetUrl, proxyIndex);
-            if (!proxyUrl) {
-                document.getElementById('loading').innerHTML = '<p>加载失败，请稍后重试</p>';
-                return;
-            }
-
-            const frame = document.getElementById('contentFrame');
-            frame.src = proxyUrl;
-
-            frame.onload = function() {
-                document.getElementById('loading').style.display = 'none';
-                frame.style.display = 'block';
-            };
-
-            frame.onerror = function() {
-                // 尝试下一个代理
-                loadWithProxy(targetUrl, proxyIndex + 1);
-            };
-
-            // 设置超时，如果5秒内没加载成功，尝试下一个代理
-            setTimeout(function() {
-                if (frame.style.display === 'none') {
-                    loadWithProxy(targetUrl, proxyIndex + 1);
-                }
-            }, 5000);
-        }
-
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const encoded = urlParams.get('u');
+            const frame = document.getElementById('contentFrame');
+            const fallback = document.getElementById('fallback');
+            const openNew = document.getElementById('openNew');
 
             if (encoded) {
                 const decoded = urlSafeBase64Decode(encoded);
                 if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
-                    loadWithProxy(decoded);
+                    // 尝试在iframe中加载
+                    frame.src = decoded;
+
+                    // 如果iframe加载失败，显示备用方案
+                    frame.onerror = function() {
+                        frame.style.display = 'none';
+                        fallback.style.display = 'block';
+                        openNew.href = decoded;
+                    };
+
+                    // 设置备用方案的链接
+                    openNew.href = decoded;
                     return;
                 }
             }
 
-            document.getElementById('loading').innerHTML = '<p>无效的URL参数</p>';
+            // 如果参数无效
+            frame.style.display = 'none';
+            fallback.style.display = 'block';
+            document.querySelector('#fallback h2').textContent = '无效的链接';
+            openNew.style.display = 'none';
         };
     </script>
 </body>
