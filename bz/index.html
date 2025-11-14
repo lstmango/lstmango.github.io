@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>加载中...</title>
+    <meta charset="utf-8">
+    <script>
+        function urlSafeBase64Decode(str) {
+            let padded = str;
+            while (padded.length % 4 !== 0) {
+                padded += '=';
+            }
+
+            try {
+                const decoded = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+                return decoded;
+            } catch (e) {
+                console.error('Base64解码失败:', e);
+                return null;
+            }
+        }
+
+        function redirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encoded = urlParams.get('u');
+
+            if (encoded) {
+                const decoded = urlSafeBase64Decode(encoded);
+                if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
+                    window.location.href = decoded;
+                    return;
+                } else {
+                    console.error('的URL格式无效:', decoded);
+                }
+            }
+
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('encodedParam').textContent = encoded || '无';
+        }
+
+        window.onload = redirect;
+    </script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>正在加载...</h2>
+
+        <div id="error" style="display: none; color: red; margin-top: 20px;">
+            <h3>加载失败</h3>
+            <p>参数: <code id="encodedParam"></code></p>
+            <p>可能的原因：</p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>链接已过期</li>
+                <li>链接参数错误</li>
+                <li>网络连接问题</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            <p>如果长时间未加载，请<a href="javascript:location.reload()">刷新页面</a></p>
+        </div>
+    </div>
+</body>
+</html>
